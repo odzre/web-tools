@@ -1,0 +1,144 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  expired
+  failed
+}
+
+model User {
+  id            String    @id @default(cuid())
+  username      String    @unique
+  email         String    @unique
+  whatsapp      String
+  password      String
+  apiKey        String    @unique @default(cuid())
+  role          Role      @default(USER)
+  isVerified    Boolean   @default(false)
+  
+  // Subscription
+  planId        String?
+  plan          SubscriptionPlan? @relation(fields: [planId], references: [id])
+  planExpiresAt DateTime?
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  merchants     GoMerchant[]
+  transactions  Transaction[]
+  otps          OtpVerification[]
+  whitelistIps  WhitelistIp[]
+
+  @@map("users")
+}
+
+model OtpVerification {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email     String
+  otp       String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@map("otp_verifications")
+}
+
+model GoMerchant {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectName   String
+  phoneNumber   String
+  accessToken   String   @db.Text
+  refreshToken  String   @db.Text
+  xUniqueid     String
+  qrString      String?  @db.Text
+  uniqueCodeDigits Int   @default(2)
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  transactions  Transaction[]
+
+  @@map("go_merchants")
+}
+
+model Transaction {
+  id            String        @id @default(cuid())
+  userId        String
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  merchantId    String
+  merchant      GoMerchant    @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  
+  trxId         String        @unique
+  refId         String
+  customerName  String?
+  amount        Int
+  uniqueCode    Int           @default(0)
+  totalAmount   Int
+  paymentStatus PaymentStatus @default(pending)
+  qrString      String?       @db.Text
+  
+  expiresAt     DateTime
+  paidAt        DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([refId, userId])
+  @@map("transactions")
+}
+
+model SubscriptionPlan {
+  id              String   @id @default(cuid())
+  name            String
+  price           Int
+  durationDays    Int
+  maxMerchants    Int      @default(1)
+  maxWhitelistIps Int      @default(1)
+  prioritySupport Boolean  @default(false)
+  isActive        Boolean  @default(true)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  users           User[]
+
+  @@map("subscription_plans")
+}
+
+model WhitelistIp {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ipAddress String
+  label     String?
+  createdAt DateTime @default(now())
+
+  @@unique([userId, ipAddress])
+  @@map("whitelist_ips")
+}
+
+model SiteSettings {
+  id        String   @id @default("default")
+  siteTitle String   @default("MyCash Payment Gateway")
+  favicon   String?
+  logo      String?
+  
+  updatedAt DateTime @updatedAt
+
+  @@map("site_settings")
+}
