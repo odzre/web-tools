@@ -281,28 +281,48 @@ export async function runSellerAutomation(
         await randomDelay(1500, 2000);
 
         // Click brand
-        await page.evaluate((text: string) => {
-            for (const btn of document.querySelectorAll('button.el-button, span, div')) {
+        await page.evaluate((text: string, ci: boolean) => {
+            for (const btn of document.querySelectorAll('button.el-button')) {
                 const t = (btn as HTMLElement).textContent?.trim() || '';
-                if (t.toUpperCase() === text.toUpperCase() && (btn as HTMLElement).getBoundingClientRect().height > 0) {
-                    const button = (btn as HTMLElement).closest('button') || btn;
-                    (button as HTMLElement).click(); return;
+                const match = ci ? t.toUpperCase() === text.toUpperCase() : t === text;
+                if (match && (btn as HTMLElement).getBoundingClientRect().height > 0) {
+                    (btn as HTMLElement).click(); return;
                 }
             }
-        }, config.brand);
+            for (const el of document.querySelectorAll('span, div')) {
+                const t = (el as HTMLElement).textContent?.trim() || '';
+                const r = (el as HTMLElement).getBoundingClientRect();
+                const match = ci ? t.toUpperCase() === text.toUpperCase() : t === text;
+                if (match && r.height > 0 && r.height < 50) {
+                    const btn = (el as HTMLElement).closest('button');
+                    if (btn) { btn.click(); return; }
+                    (el as HTMLElement).click(); return;
+                }
+            }
+        }, config.brand, true);
         await randomDelay(1500, 2000);
 
         // Click type if set
         if (config.type) {
-            await page.evaluate((text: string) => {
-                for (const btn of document.querySelectorAll('button.el-button, span, div')) {
+            await page.evaluate((text: string, ci: boolean) => {
+                for (const btn of document.querySelectorAll('button.el-button')) {
                     const t = (btn as HTMLElement).textContent?.trim() || '';
-                    if (t === text && (btn as HTMLElement).getBoundingClientRect().height > 0) {
-                        const button = (btn as HTMLElement).closest('button') || btn;
-                        (button as HTMLElement).click(); return;
+                    const match = ci ? t.toUpperCase() === text.toUpperCase() : t === text;
+                    if (match && (btn as HTMLElement).getBoundingClientRect().height > 0) {
+                        (btn as HTMLElement).click(); return;
                     }
                 }
-            }, config.type);
+                for (const el of document.querySelectorAll('span, div')) {
+                    const t = (el as HTMLElement).textContent?.trim() || '';
+                    const r = (el as HTMLElement).getBoundingClientRect();
+                    const match = ci ? t.toUpperCase() === text.toUpperCase() : t === text;
+                    if (match && r.height > 0 && r.height < 50) {
+                        const btn = (el as HTMLElement).closest('button');
+                        if (btn) { btn.click(); return; }
+                        (el as HTMLElement).click(); return;
+                    }
+                }
+            }, config.type, false);
             await randomDelay(1500, 2000);
         }
 
@@ -312,7 +332,13 @@ export async function runSellerAutomation(
         const startWait = Date.now();
         let btnCount = 0;
         while (Date.now() - startWait < 15000) {
-            btnCount = await page.evaluate(() => document.querySelectorAll('button.table-fullwidth').length);
+            btnCount = await page.evaluate(() => {
+                let cnt = 0;
+                for (const b of document.querySelectorAll('button.table-fullwidth')) {
+                    if (b.getBoundingClientRect().height > 0) cnt++;
+                }
+                return cnt;
+            });
             if (btnCount > 0) break;
             await randomDelay(500, 800);
         }
@@ -328,6 +354,7 @@ export async function runSellerAutomation(
             const buttons = document.querySelectorAll('button.table-fullwidth');
             const result: { namaProduk: string; seller: string; harga: string }[] = [];
             for (let i = 0; i < buttons.length; i++) {
+                if (buttons[i].getBoundingClientRect().height === 0) continue;
                 const row = buttons[i].closest('.el-table__row');
                 if (!row) continue;
                 const cells = row.querySelectorAll('td');
@@ -367,7 +394,13 @@ export async function runSellerAutomation(
             const start2 = Date.now();
             let cnt = 0;
             while (Date.now() - start2 < 10000) {
-                cnt = await page.evaluate(() => document.querySelectorAll('button.table-fullwidth').length);
+                cnt = await page.evaluate(() => {
+                    let d = 0;
+                    for (const b of document.querySelectorAll('button.table-fullwidth')) {
+                        if (b.getBoundingClientRect().height > 0) d++;
+                    }
+                    return d;
+                });
                 if (cnt > 0) break;
                 await randomDelay(500, 800);
             }
@@ -378,10 +411,10 @@ export async function runSellerAutomation(
                 continue;
             }
 
-            // Click Ubah Seller for this product
             const found = await page.evaluate((name: string) => {
                 const buttons = document.querySelectorAll('button.table-fullwidth');
                 for (let i = 0; i < buttons.length; i++) {
+                    if (buttons[i].getBoundingClientRect().height === 0) continue;
                     const row = buttons[i].closest('.el-table__row');
                     if (!row) continue;
                     const nama = row.querySelectorAll('td')[4]?.querySelector('.cell')?.textContent?.trim() || '';

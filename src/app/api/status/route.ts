@@ -146,20 +146,28 @@ async function checkGoMerchantStatus(
             const expectedAmount = normalizeAmount(transaction.totalAmount);
 
             if (gobizAmountInRupiah === expectedAmount && (txStatus === 'settlement' || txStatus === 'capture')) {
-                const paidAt = new Date(txTime || now);
-                await prisma.transaction.update({
-                    where: { id: transaction.id },
-                    data: { paymentStatus: 'paid', paidAt },
-                });
-                return NextResponse.json({
-                    status: 'success', code: 200, message: 'Pembayaran berhasil',
-                    data: {
-                        trx_id: transaction.trxId, ref_id: transaction.refId,
-                        amount: transaction.amount, total_amount: transaction.totalAmount,
-                        payment_type: 'qris', payment_status: 'paid',
-                        paid_at: paidAt.toISOString(),
-                    },
-                });
+                const txTimeDate = txTime ? new Date(txTime) : now;
+                const transactionCreatedAt = new Date(transaction.createdAt);
+
+                // Allow up to 5 minutes clock drift, but ensure payment is not an old mutation
+                if (txTimeDate.getTime() >= (transactionCreatedAt.getTime() - 5 * 60 * 1000)) {
+                    const paidAt = txTimeDate;
+                    await prisma.transaction.update({
+                        where: { id: transaction.id },
+                        data: { paymentStatus: 'paid', paidAt },
+                    });
+                    return NextResponse.json({
+                        status: 'success', code: 200, message: 'Pembayaran berhasil',
+                        data: {
+                            trx_id: transaction.trxId, ref_id: transaction.refId,
+                            amount: transaction.amount, total_amount: transaction.totalAmount,
+                            payment_type: 'qris', payment_status: 'paid',
+                            paid_at: paidAt.toISOString(),
+                        },
+                    });
+                } else {
+                    console.log(`[Status/GoMerchant] Ignoring old transaction match: txTime=${txTimeDate.toISOString()} < created=${transactionCreatedAt.toISOString()}`);
+                }
             }
         }
     } catch (gobizError) {
@@ -221,22 +229,29 @@ async function checkOrderKuotaStatus(
             console.log(`[Status/OrderKuota] kredit=${entry.kredit} normalized=${kredit} vs expected=${expectedAmount}`);
 
             if (kredit === expectedAmount) {
-                // Match found — mark as paid
-                const paidAt = now;
-                await prisma.transaction.update({
-                    where: { id: transaction.id },
-                    data: { paymentStatus: 'paid', paidAt },
-                });
+                const txTimeDate = entry.tanggal ? new Date(entry.tanggal) : now;
+                const transactionCreatedAt = new Date(transaction.createdAt);
 
-                return NextResponse.json({
-                    status: 'success', code: 200, message: 'Pembayaran berhasil',
-                    data: {
-                        trx_id: transaction.trxId, ref_id: transaction.refId,
-                        amount: transaction.amount, total_amount: transaction.totalAmount,
-                        payment_type: 'qris', payment_status: 'paid',
-                        paid_at: paidAt.toISOString(),
-                    },
-                });
+                if (txTimeDate.getTime() >= (transactionCreatedAt.getTime() - 5 * 60 * 1000)) {
+                    // Match found — mark as paid
+                    const paidAt = txTimeDate;
+                    await prisma.transaction.update({
+                        where: { id: transaction.id },
+                        data: { paymentStatus: 'paid', paidAt },
+                    });
+
+                    return NextResponse.json({
+                        status: 'success', code: 200, message: 'Pembayaran berhasil',
+                        data: {
+                            trx_id: transaction.trxId, ref_id: transaction.refId,
+                            amount: transaction.amount, total_amount: transaction.totalAmount,
+                            payment_type: 'qris', payment_status: 'paid',
+                            paid_at: paidAt.toISOString(),
+                        },
+                    });
+                } else {
+                    console.log(`[Status/OrderKuota] Ignoring old transaction match: txTime=${txTimeDate.toISOString()} < created=${transactionCreatedAt.toISOString()}`);
+                }
             }
         }
     } catch (okError) {
