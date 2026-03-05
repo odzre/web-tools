@@ -59,6 +59,7 @@ export async function getAuthUser() {
             planId: true,
             planExpiresAt: true,
             createdAt: true,
+            saldo: true,
             plan: true,
             whitelistIps: {
                 select: {

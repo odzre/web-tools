@@ -6,6 +6,7 @@ export interface ValidatedUser {
     email: string;
     role: string;
     isVerified: boolean;
+    saldo: number;
     planId: string | null;
     planExpiresAt: Date | null;
     plan: {
@@ -63,6 +64,7 @@ export async function validateApiRequest(apiKey: string, requestIp: string): Pro
             email: true,
             role: true,
             isVerified: true,
+            saldo: true,
             planId: true,
             planExpiresAt: true,
             plan: {
