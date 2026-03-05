@@ -33,10 +33,18 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ status: 'error', message: 'Minimal deposit Rp 5.000' }, { status: 400 });
         }
 
-        // Find an active GoMerchant from any admin user to process the deposit
-        const adminMerchant = await prisma.goMerchant.findFirst({
-            where: { user: { role: 'ADMIN' } },
+        // Find an active Merchant (GoMerchant or OrderKuota) from any admin user to process the deposit
+        const adminUser = await prisma.user.findFirst({
+            where: { role: 'ADMIN' },
+            include: { merchants: true, orderKuotaMerchants: true }
         });
+
+        const adminGoMerchant = adminUser?.merchants?.[0];
+        const adminOkMerchant = adminUser?.orderKuotaMerchants?.[0];
+
+        if (!adminGoMerchant && !adminOkMerchant) {
+            return NextResponse.json({ status: 'error', message: 'Sistem sedang tidak menerima pembayaran (Merchant belum di-set Admin)' }, { status: 400 });
+        }
 
         // Generate unique code
         const uniqueCode = Math.floor(Math.random() * 900) + 100;
@@ -44,11 +52,14 @@ export async function POST(req: NextRequest) {
         const trxId = `DEP-${Date.now()}-${crypto.randomBytes(3).toString('hex')}`;
         const refId = `DEPOSIT-${user.id.slice(0, 8)}`;
 
+        const usedMerchantType = adminGoMerchant ? 'goMerchant' : 'orderKuota';
+
         // Create transaction for deposit
         const transaction = await prisma.transaction.create({
             data: {
                 userId: user.id,
-                merchantId: adminMerchant?.id || null,
+                merchantId: adminGoMerchant?.id || null,
+                okMerchantId: adminGoMerchant ? null : adminOkMerchant?.id,
                 toolType: 'deposit',
                 trxId,
                 refId,
@@ -63,11 +74,14 @@ export async function POST(req: NextRequest) {
 
         // Generate QR if merchant has qr string
         let qrImage = null;
-        if (adminMerchant?.qrString) {
+        let baseQrString = adminGoMerchant?.qrString || adminOkMerchant?.qrString;
+
+        if (baseQrString) {
             // Dynamic QRIS
-            let qrisData = adminMerchant.qrString.slice(0, -4);
+            let qrisData = baseQrString.slice(0, -4);
             const step1 = qrisData.replace('010211', '010212');
             const step2 = step1.split('5802ID');
+            const step3 = `${step2[0]}54${String(totalAmount).length.toString().padStart(2, '0')}${totalAmount}5802ID${step2[1]}`;
             const amountStr = totalAmount.toString();
             const amountTLV = '54' + ('0' + amountStr.length).slice(-2) + amountStr;
             const finalStr = step2[0] + amountTLV + '5802ID' + step2[1];
