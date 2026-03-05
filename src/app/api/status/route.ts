@@ -114,11 +114,11 @@ async function checkGoMerchantStatus(
     }
 
     try {
-        const gobiz = new GobizService(transaction.merchant.xUniqueid);
+        const gobiz = new GobizService(transaction.merchant!.xUniqueid);
         const { data: txData } = await gobiz.getTransactionsWithAutoRefresh(
-            transaction.merchant.id,
-            transaction.merchant.accessToken,
-            transaction.merchant.refreshToken,
+            transaction.merchant!.id,
+            transaction.merchant!.accessToken,
+            transaction.merchant!.refreshToken,
             { size: 50 }
         );
 
@@ -199,9 +199,11 @@ async function checkOrderKuotaStatus(
     }
 
     try {
+        const encryptedToken = transaction.okMerchant!.okAuthToken;
+        const okUsername = transaction.okMerchant!.okUsername;
         const mutasiRes = await okGetMutasi(
-            transaction.okMerchant.okUsername,
-            transaction.okMerchant.okAuthToken
+            okUsername,
+            encryptedToken
         );
 
         const entries = mutasiRes?.result || [];
