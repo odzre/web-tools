@@ -18,6 +18,7 @@ export async function GET() {
                 whatsapp: true,
                 role: true,
                 isVerified: true,
+                saldo: true,
                 apiKey: true,
                 planId: true,
                 planExpiresAt: true,
@@ -44,7 +45,7 @@ export async function PUT(req: NextRequest) {
         }
 
         const body = await req.json();
-        const { userId, role, planId, planExpiresAt } = body;
+        const { userId, role, planId, planExpiresAt, saldoAction, saldoAmount } = body;
 
         if (!userId) {
             return NextResponse.json({ status: 'error', message: 'User ID wajib diisi' }, { status: 400 });
@@ -58,6 +59,32 @@ export async function PUT(req: NextRequest) {
             if (!planId) updateData.planExpiresAt = null;
         }
         if (planExpiresAt) updateData.planExpiresAt = new Date(planExpiresAt);
+
+        // Handle saldo changes
+        if (saldoAction && saldoAmount) {
+            const amt = parseInt(saldoAmount);
+            if (amt > 0) {
+                const targetUser = await prisma.user.findUnique({ where: { id: userId }, select: { saldo: true } });
+                if (targetUser) {
+                    let newSaldo = targetUser.saldo;
+                    let logType = 'admin_add';
+                    if (saldoAction === 'add') { newSaldo += amt; logType = 'admin_add'; }
+                    else if (saldoAction === 'reduce') { newSaldo = Math.max(0, newSaldo - amt); logType = 'admin_reduce'; }
+                    else if (saldoAction === 'set') { newSaldo = amt; logType = 'admin_add'; }
+                    updateData.saldo = newSaldo;
+                    await prisma.saldoLog.create({
+                        data: {
+                            userId,
+                            amount: newSaldo - targetUser.saldo,
+                            balanceBefore: targetUser.saldo,
+                            balanceAfter: newSaldo,
+                            type: logType,
+                            description: `Admin ${saldoAction} saldo: ${amt}`,
+                        },
+                    });
+                }
+            }
+        }
 
         await prisma.user.update({
             where: { id: userId },

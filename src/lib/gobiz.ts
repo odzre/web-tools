@@ -165,12 +165,24 @@ export class GobizService {
     private isTokenExpiredError(error: unknown): boolean {
         if (error instanceof AxiosError) {
             const status = error.response?.status;
+            const responseData = error.response?.data;
+            const responseStr = JSON.stringify(responseData || '').toLowerCase();
+
+            // 401 Unauthorized — always a token issue
             if (status === 401) return true;
 
-            // Some APIs return 403 with specific messages for expired tokens
+            // GoBiz sometimes returns 200/400/403 with body containing token error message
+            // e.g. { message: 'Invalid/Expired token' }
+            if (responseStr.includes('invalid/expired token') ||
+                responseStr.includes('invalid token') ||
+                responseStr.includes('expired token') ||
+                (responseStr.includes('token') && responseStr.includes('expired'))) {
+                return true;
+            }
+
+            // 403 with token-related message
             if (status === 403) {
-                const msg = JSON.stringify(error.response?.data || '').toLowerCase();
-                if (msg.includes('token') && (msg.includes('expired') || msg.includes('invalid'))) {
+                if (responseStr.includes('token') && (responseStr.includes('expired') || responseStr.includes('invalid'))) {
                     return true;
                 }
             }
@@ -340,6 +352,94 @@ export class GobizService {
                 throw new TokenExpiredError(merchantId);
             }
             // Other errors during refresh
+            throw refreshError;
+        }
+    }
+
+    // ─── Generic Auto-Refresh Wrapper ────────────────────────────────
+
+    /**
+     * Generic auto-refresh wrapper untuk semua GoBiz API call.
+     * Berbeda dari getTransactionsWithAutoRefresh yang spesifik untuk transaksi,
+     * method ini bisa wrap fungsi apapun yang butuh GoBiz Bearer token.
+     *
+     * Flow:
+     * 1. Decrypt access token → jalankan fn(accessToken)
+     * 2. Jika response mengandung 'Invalid/Expired token' ATAU 401 → refresh
+     * 3. Update token baru ke DB
+     * 4. Retry fn dengan token baru
+     * 5. Jika refresh gagal → throw TokenExpiredError (butuh re-login OTP)
+     *
+     * @param merchantId            - GoMerchant DB record id
+     * @param encryptedAccessToken  - Encrypted access token dari DB
+     * @param encryptedRefreshToken - Encrypted refresh token dari DB
+     * @param fn                    - Async function yang menerima plaintext access token
+     */
+    async withAutoRefresh<T>(
+        merchantId: string,
+        encryptedAccessToken: string,
+        encryptedRefreshToken: string,
+        fn: (accessToken: string) => Promise<T>
+    ): Promise<{ data: T; tokenRefreshed: boolean }> {
+        const accessToken = decrypt(encryptedAccessToken);
+
+        // Attempt 1: Try with current access token
+        try {
+            const result = await fn(accessToken);
+
+            // GoBiz kadang return 200 tapi body mengandung error token
+            const resultStr = JSON.stringify(result || '').toLowerCase();
+            if (
+                resultStr.includes('invalid/expired token') ||
+                resultStr.includes('invalid token') ||
+                resultStr.includes('expired token')
+            ) {
+                console.log(`[GoBiz] Token invalid in response body for merchant ${merchantId}, attempting refresh...`);
+                throw new AxiosError('Token invalid in response body', undefined, undefined, undefined, {
+                    status: 401,
+                    data: result,
+                    headers: {} as ReturnType<typeof axios.create>['defaults']['headers'],
+                    config: {} as never,
+                    statusText: 'Unauthorized',
+                });
+            }
+
+            return { data: result, tokenRefreshed: false };
+        } catch (error) {
+            if (!this.isTokenExpiredError(error)) throw error;
+            console.log(`[GoBiz] Access token expired for merchant ${merchantId}, attempting refresh...`);
+        }
+
+        // Attempt 2: Refresh and retry
+        let refreshToken: string;
+        try {
+            refreshToken = decrypt(encryptedRefreshToken);
+        } catch {
+            throw new TokenExpiredError(merchantId, 'Failed to decrypt refresh token. Re-login required.');
+        }
+
+        try {
+            const newTokens = await this.refreshAccessToken(refreshToken);
+            console.log(`[GoBiz] Token refreshed via withAutoRefresh for merchant ${merchantId}`);
+
+            const newEncryptedAccess = encrypt(newTokens.accessToken);
+            const newEncryptedRefresh = encrypt(newTokens.refreshToken);
+
+            await prisma.goMerchant.update({
+                where: { id: merchantId },
+                data: {
+                    accessToken: newEncryptedAccess,
+                    refreshToken: newEncryptedRefresh,
+                },
+            });
+
+            const result = await fn(newTokens.accessToken);
+            return { data: result, tokenRefreshed: true };
+        } catch (refreshError) {
+            if (this.isTokenExpiredError(refreshError)) {
+                console.error(`[GoBiz] Refresh token also expired for merchant ${merchantId}. Re-login needed.`);
+                throw new TokenExpiredError(merchantId);
+            }
             throw refreshError;
         }
     }

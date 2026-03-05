@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 
 export default function AdminWebsitePage() {
-    const [form, setForm] = useState({ siteTitle: '', favicon: '', logo: '' });
+    const [form, setForm] = useState({ siteTitle: '', favicon: '', logo: '', qrisApiKey: '', qrisProject: '' });
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [uploading, setUploading] = useState<string | null>(null);
@@ -20,6 +20,8 @@ export default function AdminWebsitePage() {
                         siteTitle: data.data.siteTitle || '',
                         favicon: data.data.favicon || '',
                         logo: data.data.logo || '',
+                        qrisApiKey: data.data.qrisApiKey || '',
+                        qrisProject: data.data.qrisProject || '',
                     });
                 }
             })
@@ -224,6 +226,38 @@ export default function AdminWebsitePage() {
                                 />
                             </div>
                             <p className="text-[10px] text-[#64748b]">Format: ICO, PNG, SVG. Max 2MB. Ukuran disarankan: 32x32 atau 64x64.</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* QRIS Subscribe Config */}
+                <div className="glass rounded-2xl p-6">
+                    <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                        <svg className="w-5 h-5 text-[#34d399]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                        </svg>
+                        Konfigurasi QRIS Subscribe
+                    </h2>
+                    <p className="text-xs text-[#64748b] mb-4">Atur API Key dan Nama Project MyCash untuk menerima pembayaran subscribe otomatis via QRIS.</p>
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-[#94a3b8] mb-2">API Key</label>
+                            <input
+                                type="text"
+                                value={form.qrisApiKey}
+                                onChange={(e) => setForm({ ...form, qrisApiKey: e.target.value })}
+                                placeholder="Masukkan API Key MyCash"
+                                className="font-mono text-sm"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-[#94a3b8] mb-2">Nama Project</label>
+                            <input
+                                type="text"
+                                value={form.qrisProject}
+                                onChange={(e) => setForm({ ...form, qrisProject: e.target.value })}
+                                placeholder="Masukkan nama project merchant"
+                            />
                         </div>
                     </div>
                 </div>

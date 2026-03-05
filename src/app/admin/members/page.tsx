@@ -9,6 +9,7 @@ interface Member {
     whatsapp: string;
     role: string;
     isVerified: boolean;
+    saldo: number;
     apiKey: string;
     planId: string | null;
     planExpiresAt: string | null;
@@ -39,7 +40,7 @@ export default function AdminMembersPage() {
     const [plans, setPlans] = useState<Plan[]>([]);
     const [loading, setLoading] = useState(true);
     const [editMember, setEditMember] = useState<Member | null>(null);
-    const [editForm, setEditForm] = useState({ role: '', planId: '' as string | null, planExpiresAt: '', extendDays: '' });
+    const [editForm, setEditForm] = useState({ role: '', planId: '' as string | null, planExpiresAt: '', extendDays: '', saldoAction: '', saldoAmount: '' });
     const [editLoading, setEditLoading] = useState(false);
     const [msg, setMsg] = useState({ type: '', text: '' });
     const [search, setSearch] = useState('');
@@ -84,6 +85,8 @@ export default function AdminMembersPage() {
             planId: member.planId,
             planExpiresAt: member.planExpiresAt ? new Date(member.planExpiresAt).toISOString().split('T')[0] : '',
             extendDays: '',
+            saldoAction: '',
+            saldoAmount: '',
         });
         setMsg({ type: '', text: '' });
         // Fetch user IPs
@@ -132,6 +135,10 @@ export default function AdminMembersPage() {
         try {
             // Build update payload
             const payload: Record<string, unknown> = { userId: editMember.id };
+            if (editForm.saldoAction && editForm.saldoAmount) {
+                payload.saldoAction = editForm.saldoAction;
+                payload.saldoAmount = editForm.saldoAmount;
+            }
             if (editForm.role !== editMember.role) payload.role = editForm.role;
 
             // Plan change
@@ -284,6 +291,7 @@ export default function AdminMembersPage() {
                                 </span>
                             )}
                             <span>{m._count.transactions} trx</span>
+                            <span className="text-[#a78bfa] font-medium">💰 {m.saldo?.toLocaleString('id-ID') || 0}P</span>
                             <span>{formatDate(m.createdAt)}</span>
                         </div>
                     </div>
@@ -449,6 +457,31 @@ export default function AdminMembersPage() {
                                 </div>
                                 {memberIps.length === 0 && (
                                     <p className="text-[10px] text-[#475569] mt-1">Belum ada IP terdaftar</p>
+                                )}
+                            </div>
+
+                            {/* Saldo Management */}
+                            <div>
+                                <label className="block text-sm font-medium text-[#94a3b8] mb-2">Saldo <span className="text-[#a78bfa] font-bold">{editMember.saldo?.toLocaleString('id-ID') || 0}P</span></label>
+                                <div className="flex gap-2 mb-2">
+                                    {['add', 'reduce', 'set'].map(action => (
+                                        <button key={action} type="button"
+                                            onClick={() => setEditForm({ ...editForm, saldoAction: action })}
+                                            className={`flex-1 py-2 rounded-xl text-xs font-medium transition border ${editForm.saldoAction === action
+                                                    ? action === 'add' ? 'bg-[#34d399]/20 border-[#34d399]/40 text-[#34d399]'
+                                                        : action === 'reduce' ? 'bg-[#f87171]/20 border-[#f87171]/40 text-[#f87171]'
+                                                            : 'bg-[#38bdf8]/20 border-[#38bdf8]/40 text-[#38bdf8]'
+                                                    : 'border-[#334155] text-[#64748b] hover:border-[#94a3b8]/30'
+                                                }`}
+                                        >
+                                            {action === 'add' ? '+ Tambah' : action === 'reduce' ? '- Kurangi' : '= Set'}
+                                        </button>
+                                    ))}
+                                </div>
+                                {editForm.saldoAction && (
+                                    <input type="number" value={editForm.saldoAmount}
+                                        onChange={(e) => setEditForm({ ...editForm, saldoAmount: e.target.value })}
+                                        placeholder="Jumlah saldo" min={1} className="text-sm" />
                                 )}
                             </div>
 

@@ -166,37 +166,39 @@ export default function DashboardPage() {
                         <p className="text-[#334155] text-sm">Belum ada transaksi</p>
                     </div>
                 ) : (
-                    <div className="overflow-x-auto">
-                        <table className="data-table">
-                            <thead>
-                                <tr>
-                                    <th>TRX ID</th>
-                                    <th>Project</th>
-                                    <th>Amount</th>
-                                    <th>Total</th>
-                                    <th>Status</th>
-                                    <th>Tanggal</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {transactions.map((tx) => (
-                                    <tr key={tx.trxId}>
-                                        <td className="font-mono text-[#38bdf8] text-xs">{tx.trxId}</td>
-                                        <td className="text-[13px]">{tx.merchant.projectName}</td>
-                                        <td className="text-[13px]">{formatRupiah(tx.amount)}</td>
-                                        <td className="text-[13px] font-medium text-white">{formatRupiah(tx.totalAmount)}</td>
-                                        <td>{statusBadge(tx.paymentStatus)}</td>
-                                        <td className="text-xs text-[#475569]">
-                                            {new Date(tx.createdAt).toLocaleDateString('id-ID', {
-                                                day: '2-digit',
-                                                month: 'short',
-                                                year: 'numeric',
-                                            })}
-                                        </td>
+                    <div className="overflow-x-auto -mx-4 md:mx-0">
+                        <div className="min-w-[640px] px-4 md:px-0">
+                            <table className="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>TRX ID</th>
+                                        <th>Project</th>
+                                        <th>Amount</th>
+                                        <th>Total</th>
+                                        <th>Status</th>
+                                        <th>Tanggal</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    {transactions.map((tx) => (
+                                        <tr key={tx.trxId}>
+                                            <td className="font-mono text-[#38bdf8] text-xs">{tx.trxId}</td>
+                                            <td className="text-[13px]">{tx.merchant.projectName}</td>
+                                            <td className="text-[13px]">{formatRupiah(tx.amount)}</td>
+                                            <td className="text-[13px] font-medium text-white">{formatRupiah(tx.totalAmount)}</td>
+                                            <td>{statusBadge(tx.paymentStatus)}</td>
+                                            <td className="text-xs text-[#475569]">
+                                                {new Date(tx.createdAt).toLocaleDateString('id-ID', {
+                                                    day: '2-digit',
+                                                    month: 'short',
+                                                    year: 'numeric',
+                                                })}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 )}
             </div>

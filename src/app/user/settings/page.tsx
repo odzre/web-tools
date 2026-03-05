@@ -192,7 +192,7 @@ export default function SettingsPage() {
     const hasActivePlan = user?.planId && user?.plan && (!user.planExpiresAt || new Date(user.planExpiresAt) > new Date());
 
     return (
-        <div className="space-y-6 animate-slide-up max-w-3xl">
+        <div className="space-y-6 animate-slide-up w-full max-w-3xl">
             <div>
                 <h1 className="text-2xl font-bold text-white">Pengaturan</h1>
                 <p className="text-[#94a3b8] text-sm mt-1">Kelola profil, password, API key, dan whitelist IP</p>
@@ -208,8 +208,8 @@ export default function SettingsPage() {
             <div className="glass rounded-2xl p-6">
                 <h2 className="text-lg font-semibold text-white mb-4">API Key</h2>
                 <div className="flex items-center gap-3 mb-4">
-                    <div className="flex-1 bg-[#0f172a] rounded-lg px-4 py-3 font-mono text-sm">
-                        <span className="text-[#94a3b8]">
+                    <div className="flex-1 bg-[#0f172a] rounded-lg px-4 py-3 font-mono text-sm min-w-0 overflow-hidden">
+                        <span className="text-[#94a3b8] block truncate">
                             {showApiKey ? user?.apiKey : '••••••••••••••••••••••••••••••••'}
                         </span>
                     </div>
@@ -295,7 +295,7 @@ export default function SettingsPage() {
 
                 {/* Add IP Form */}
                 {hasActivePlan && whitelistIps.length < maxIps && (
-                    <form onSubmit={handleAddIp} className="flex gap-3">
+                    <form onSubmit={handleAddIp} className="flex flex-col sm:flex-row gap-3">
                         <input
                             type="text"
                             placeholder="Contoh: 1.1.1.1 atau 1.1.1.1,2.2.2.2"

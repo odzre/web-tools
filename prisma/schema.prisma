@@ -28,6 +28,7 @@ model User {
   apiKey        String    @unique @default(cuid())
   role          Role      @default(USER)
   isVerified    Boolean   @default(false)
+  saldo         Int       @default(0)
   
   // Subscription
   planId        String?
@@ -41,6 +42,10 @@ model User {
   transactions  Transaction[]
   otps          OtpVerification[]
   whitelistIps  WhitelistIp[]
+  subscriptionOrders SubscriptionOrder[]
+  orderKuotaMerchants OrderKuotaMerchant[]
+  digiflazzAccount DigiflazzAccount?
+  saldoLogs     SaldoLog[]
 
   @@map("users")
 }
@@ -81,8 +86,17 @@ model Transaction {
   id            String        @id @default(cuid())
   userId        String
   user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  merchantId    String
-  merchant      GoMerchant    @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  
+  // Tool type: "goMerchant" | "orderKuota"
+  toolType      String        @default("goMerchant")
+
+  // GoMerchant (optional for OrderKuota transactions)
+  merchantId    String?
+  merchant      GoMerchant?   @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  // OrderKuota (optional for GoMerchant transactions)
+  okMerchantId  String?
+  okMerchant    OrderKuotaMerchant? @relation(fields: [okMerchantId], references: [id], onDelete: Cascade)
   
   trxId         String        @unique
   refId         String
@@ -102,6 +116,28 @@ model Transaction {
   @@map("transactions")
 }
 
+model OrderKuotaMerchant {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectName      String
+  okId             String?            // ID user di OrderKuota (e.g. "2447632")
+  okUsername       String
+  okName           String?            // Display name dari OrderKuota
+  okAuthToken      String   @db.Text  // Token terenkripsi, tidak bisa diedit user
+  okBalance        String?            // Saldo terakhir (opsional)
+  qrString         String?  @db.Text
+  uniqueCodeDigits Int      @default(2)
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  transactions     Transaction[]
+
+  @@map("orderkuota_merchants")
+}
+
+
 model SubscriptionPlan {
   id              String   @id @default(cuid())
   name            String
@@ -116,6 +152,7 @@ model SubscriptionPlan {
   updatedAt       DateTime @updatedAt
 
   users           User[]
+  subscriptionOrders SubscriptionOrder[]
 
   @@map("subscription_plans")
 }
@@ -137,8 +174,64 @@ model SiteSettings {
   siteTitle String   @default("MyCash Payment Gateway")
   favicon   String?
   logo      String?
+  qrisApiKey  String?
+  qrisProject String?
   
   updatedAt DateTime @updatedAt
 
   @@map("site_settings")
+}
+
+model SubscriptionOrder {
+  id            String        @id @default(cuid())
+  userId        String
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planId        String
+  plan          SubscriptionPlan @relation(fields: [planId], references: [id])
+  
+  trxId         String        @unique
+  refId         String        @unique
+  amount        Int
+  uniqueCode    Int           @default(0)
+  totalAmount   Int
+  qrString      String?       @db.Text
+  qrImageUrl    String?       @db.Text
+  paymentStatus PaymentStatus @default(pending)
+  
+  expiresAt     DateTime
+  paidAt        DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@map("subscription_orders")
+}
+
+model DigiflazzAccount {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email           String
+  cookiesData     String   @db.LongText  // Encrypted cookies JSON
+  isConnected     Boolean  @default(true)
+  lastUsedAt      DateTime?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("digiflazz_accounts")
+}
+
+model SaldoLog {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount          Int              // +/- change
+  balanceBefore   Int
+  balanceAfter    Int
+  type            String           // "deposit" | "usage" | "admin_add" | "admin_reduce"
+  description     String?
+  
+  createdAt       DateTime @default(now())
+
+  @@map("saldo_logs")
 }

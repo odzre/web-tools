@@ -29,7 +29,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const pathname = usePathname();
     const router = useRouter();
     const [user, setUser] = useState<User | null>(null);
-    const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
     const [toolsOpen, setToolsOpen] = useState(true);
     const [loading, setLoading] = useState(true);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -78,6 +78,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </svg>
             ),
         },
+        {
+            label: 'Deposit Saldo',
+            href: '/user/deposit',
+            icon: (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            ),
+        },
     ];
 
     const toolItems = [
@@ -91,14 +100,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             ),
         },
         {
-            label: 'OrderKouta',
-            href: '#',
+            label: 'OrderKuota',
+            href: '/user/tools/orderkuota',
             icon: (
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                 </svg>
             ),
-            badge: 'Soon',
+        },
+        {
+            label: 'Digiflazz',
+            href: '/user/tools/digiflazz',
+            icon: (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+            ),
         },
     ];
 
@@ -135,7 +152,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return (
         <SiteSettingsProvider>
             <UserContext.Provider value={{ user, refreshUser: fetchUser }}>
-                <div className="min-h-screen flex flex-col">
+                <div className="min-h-screen flex flex-col overflow-x-hidden">
                     {/* Navbar */}
                     <nav className="glass-strong border-b border-[#334155]/50 fixed top-0 left-0 right-0 z-50 h-16">
                         <div className="flex items-center justify-between h-full px-4">
@@ -199,7 +216,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         </div>
                     </nav>
 
-                    <div className="flex pt-16 min-h-screen">
+                    <div className="flex pt-16 min-h-screen overflow-x-hidden">
                         {/* Mobile overlay */}
                         {mobileMenuOpen && (
                             <div
@@ -210,8 +227,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
                         {/* Sidebar */}
                         <aside
-                            className={`fixed md:sticky top-16 left-0 h-[calc(100vh-4rem)] glass-strong border-r border-[#334155]/50 z-40 flex flex-col transition-all duration-300 ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
-                                } ${sidebarOpen ? 'w-64' : 'w-20'}`}
+                            className={`fixed md:sticky top-16 left-0 h-[calc(100vh-4rem)] glass-strong border-r border-[#334155]/50 z-40 flex flex-col transition-all duration-300 ${mobileMenuOpen ? 'translate-x-0 w-64' : '-translate-x-full md:translate-x-0'
+                                } ${!mobileMenuOpen && sidebarOpen ? 'w-64' : !mobileMenuOpen ? 'w-20' : ''}`}
                         >
                             <div className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
                                 {menuItems.map((item) => (
@@ -222,7 +239,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                                         className={`sidebar-link ${pathname === item.href ? 'active' : ''}`}
                                     >
                                         {item.icon}
-                                        {sidebarOpen && <span>{item.label}</span>}
+                                        {(sidebarOpen || mobileMenuOpen) && <span>{item.label}</span>}
                                     </Link>
                                 ))}
 
@@ -236,16 +253,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
                                             </svg>
-                                            {sidebarOpen && <span>Tools</span>}
+                                            {(sidebarOpen || mobileMenuOpen) && <span>Tools</span>}
                                         </div>
-                                        {sidebarOpen && (
+                                        {(sidebarOpen || mobileMenuOpen) && (
                                             <svg className={`w-4 h-4 text-[#64748b] transition-transform ${toolsOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                                             </svg>
                                         )}
                                     </button>
 
-                                    {toolsOpen && sidebarOpen && (
+                                    {toolsOpen && (sidebarOpen || mobileMenuOpen) && (
                                         <div className="pl-4 space-y-1 mt-1">
                                             {toolItems.map((item) => (
                                                 <Link
@@ -256,11 +273,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                                                 >
                                                     {item.icon}
                                                     <span>{item.label}</span>
-                                                    {item.badge && (
-                                                        <span className="ml-auto text-[10px] bg-[#334155] text-[#94a3b8] px-2 py-0.5 rounded-full">
-                                                            {item.badge}
-                                                        </span>
-                                                    )}
                                                 </Link>
                                             ))}
                                         </div>
@@ -277,14 +289,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                                         className={`sidebar-link ${pathname === item.href ? 'active' : ''}`}
                                     >
                                         {item.icon}
-                                        {sidebarOpen && <span>{item.label}</span>}
+                                        {(sidebarOpen || mobileMenuOpen) && <span>{item.label}</span>}
                                     </Link>
                                 ))}
                             </div>
                         </aside>
 
                         {/* Main content */}
-                        <main className="flex-1 flex flex-col min-h-[calc(100vh-4rem)]">
+                        <main className="flex-1 flex flex-col min-h-[calc(100vh-4rem)] min-w-0 overflow-x-hidden">
                             <div className="flex-1 p-4 md:p-6 lg:p-8">
                                 {children}
                             </div>

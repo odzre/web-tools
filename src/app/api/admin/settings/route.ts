@@ -29,12 +29,14 @@ export async function PUT(req: NextRequest) {
         }
 
         const body = await req.json();
-        const { siteTitle, favicon, logo } = body;
+        const { siteTitle, favicon, logo, qrisApiKey, qrisProject } = body;
 
         const updateData: Record<string, unknown> = {};
         if (siteTitle) updateData.siteTitle = siteTitle;
         if (favicon !== undefined) updateData.favicon = favicon;
         if (logo !== undefined) updateData.logo = logo;
+        if (qrisApiKey !== undefined) updateData.qrisApiKey = qrisApiKey;
+        if (qrisProject !== undefined) updateData.qrisProject = qrisProject;
 
         await prisma.siteSettings.upsert({
             where: { id: 'default' },
