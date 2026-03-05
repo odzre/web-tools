@@ -98,11 +98,7 @@ export async function POST(req: NextRequest) {
 
 // ─── GoMerchant Status Check (unchanged original logic) ─────────────────────
 async function checkGoMerchantStatus(
-    transaction: {
-        id: string; trxId: string; refId: string; amount: number;
-        totalAmount: number; expiresAt: Date;
-        merchant: { id: string; xUniqueid: string; accessToken: string; refreshToken: string } | null;
-    },
+    transaction: any,
     now: Date
 ) {
     if (!transaction.merchant) {
@@ -187,11 +183,7 @@ async function checkGoMerchantStatus(
 
 // ─── OrderKuota Mutasi Status Check ─────────────────────────────────────────
 async function checkOrderKuotaStatus(
-    transaction: {
-        id: string; trxId: string; refId: string; amount: number;
-        totalAmount: number; expiresAt: Date;
-        okMerchant: { id: string; okUsername: string; okAuthToken: string } | null;
-    },
+    transaction: any,
     now: Date
 ) {
     if (!transaction.okMerchant) {
